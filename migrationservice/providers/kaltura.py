@@ -1012,16 +1012,13 @@ class KalturaProvider(BaseProvider):
 
         if phase == "users":
             # Kaltura ignores a filter field it does not support, so this was verified live
-            users, next_cursor = self.client.list_page_by_index("user", cursor, page_size, {"typeIn": str(USER_TYPE_USER)})
-            return [str(user["id"]) for user in users if user.get("id") and not is_system_user(user.get("id"))], next_cursor
+            return self._list_kept("user", cursor, page_size, {"typeIn": str(USER_TYPE_USER)}, lambda user: not is_system_user(user.get("id")))
 
         if phase == "playlists":
-            playlists, next_cursor = self.client.list_page_by_index("playlist", cursor, page_size)
-            return [str(p["id"]) for p in playlists if p.get("id") and self.playlist_is_migratable(p)], next_cursor
+            return self._list_kept("playlist", cursor, page_size, None, self.playlist_is_migratable)
 
         if phase == "groups":
-            groups, next_cursor = self.client.list_page_by_index("user", cursor, page_size, {"typeIn": str(USER_TYPE_GROUP)})
-            return [str(group["id"]) for group in groups if group.get("id")], next_cursor
+            return self._list_kept("user", cursor, page_size, {"typeIn": str(USER_TYPE_GROUP)}, lambda group: True)
 
         if phase == "categories":
             return self._list_importable_categories(cursor, page_size)
@@ -1070,6 +1067,16 @@ class KalturaProvider(BaseProvider):
         if ">" not in full_name and is_instance_root(full_name, self._all_category_paths()):
             return False
         return is_importable_category(full_name) and self._within_selection(full_name)
+
+    def _list_kept(self, service, cursor, page_size, kfilter, keep):
+        while True:
+            objects, next_cursor = self.client.list_page_by_index(service, cursor, page_size, kfilter)
+            if not objects:
+                return [], cursor
+            kept = [str(item["id"]) for item in objects if item.get("id") and keep(item)]
+            if kept:
+                return kept, next_cursor
+            cursor = next_cursor
 
     def _list_importable_categories(self, cursor, page_size):
         """One page of categories worth importing.
