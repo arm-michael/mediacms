@@ -290,14 +290,15 @@ as on the root it hangs from.
 | --- | --- | --- |
 | `privacyContexts` | set, e.g. `MediaSpace` | empty |
 | Category permissions | honoured, see [Permissions](#permissions) | none to honour |
-| Media state | from the category type | public |
+| Media state | from the category type | private, reached through the course |
 
 The consequence worth understanding: **the permission fields on an LMS category do nothing at
-the source.** Kaltura serves that content to anyone regardless of what `privacy` says, because
-there is no privacy context for it to enforce. So the migration reads those categories as
-public rather than importing a restriction that was never in force, which would hide media the
-source was showing and hand out RBAC groups gating something nobody gated. A payload with no
-`privacyContexts` field at all is read as KMS, the cautious direction.
+the source**, because there is no privacy context for Kaltura to enforce them in. What gates LMS
+content is the course itself: it is shown to the people enrolled in it. So the migration reads
+LMS categories as private and imports no permissions from them; an entry only in LMS courses
+arrives private, and the course's RBAC group (see below) is how its people reach it. MediaCMS
+shows such an entry as **Shared**. An entry that is also in a public KMS gallery stays public.
+A payload with no `privacyContexts` field at all is read as KMS.
 
 An LMS integration also does not put a course's media in the course channel. It creates a
 child named **InContext** and parks the media there, leaving the course itself empty. That
@@ -448,7 +449,7 @@ answered by `privacy` alone.
 | --- | --- | --- | --- |
 | No Restriction | No Restriction | plain | public |
 | No Restriction | Private | RBAC category with a group | public |
-| Requires Authentication | No Restriction | RBAC category with a group | unlisted |
+| Requires Authentication | No Restriction | RBAC category with a group | private, visible to the group |
 | Requires Authentication | Private | RBAC category with a group | private |
 | Private | either | RBAC category with a group | private, visible to the group |
 | Shared Repository | either | RBAC category with a group | private, visible to the group |
@@ -470,12 +471,10 @@ category's state.
 
 Two things about this mapping are worth knowing before you run it.
 
-**Open becomes unlisted, which is a downgrade in one direction and not in the other.** Open
-in Kaltura means any logged in user may watch. MediaCMS has no such state: it has public,
-unlisted and private. Unlisted is the closest fit, and on a portal where
-`GLOBAL_LOGIN_REQUIRED` is off it is reachable by anyone holding the link. If that matters
-for your content, turn **Maintain publish state of media** off and set the states yourself, or set
-`GLOBAL_LOGIN_REQUIRED = True`.
+**Open becomes private and shared with the channel's group.** Open in Kaltura means any logged
+in user may watch. MediaCMS has no such state, so the entry arrives private in an RBAC
+category, and the people Kaltura named on the channel see it through its group. MediaCMS
+shows such an entry as **Shared**. Widening it to everyone is then the owner's decision.
 
 **Requires Authentication becomes a group holding the people Kaltura named**, the owner
 among them, rather than a plain category. MediaCMS has no "any logged in user may view"

@@ -45,8 +45,9 @@ class TestMediaState(TestCase):
     def test_any_public_category_is_public(self):
         self.assertEqual(media_state([PRIVACY_MEMBERS_ONLY, PRIVACY_ALL]), "public")
 
-    def test_only_restricted_categories_is_unlisted(self):
-        self.assertEqual(media_state([PRIVACY_AUTHENTICATED, PRIVACY_MEMBERS_ONLY]), "unlisted")
+    def test_requires_authentication_and_restricted_categories_are_private(self):
+        self.assertEqual(media_state([PRIVACY_AUTHENTICATED, PRIVACY_MEMBERS_ONLY]), "private")
+        self.assertEqual(media_state([PRIVACY_AUTHENTICATED]), "private")
 
     def test_display_in_search_none_downgrades_public_to_unlisted(self):
         self.assertEqual(media_state([PRIVACY_ALL], DISPLAY_IN_SEARCH_NONE), "unlisted")
@@ -529,9 +530,16 @@ class TestTreeKind(TestCase):
     def test_a_payload_without_the_field_is_read_as_kms(self):
         self.assertEqual(category_tree_kind({}), KMS_TREE)
 
-    def test_lms_permission_fields_are_inert(self):
-        category = {"privacyContexts": "", "privacy": PRIVACY_MEMBERS_ONLY, "contributionPolicy": CONTRIBUTION_MEMBERS}
-        self.assertEqual(category_type(category), CATEGORY_PUBLIC)
+    def test_an_lms_category_is_private_whatever_its_permission_fields(self):
+        for privacy in (PRIVACY_ALL, PRIVACY_MEMBERS_ONLY):
+            category = {"privacyContexts": "", "privacy": privacy, "contributionPolicy": CONTRIBUTION_MEMBERS}
+            self.assertEqual(category_type(category), CATEGORY_PRIVATE)
+
+    def test_an_entry_only_in_lms_courses_is_private_and_a_public_gallery_still_wins(self):
+        course = {"privacyContexts": "", "privacy": PRIVACY_ALL, "fullName": "moodle_x>site>channels>15"}
+        gallery = {"privacyContexts": "MediaSpace", "privacy": PRIVACY_ALL, "fullName": "MediaSpace>site>galleries>Education"}
+        self.assertEqual(media_state([course]), "private")
+        self.assertEqual(media_state([course, gallery]), "public")
 
     def test_the_same_fields_inside_a_context_are_honoured(self):
         category = {"privacyContexts": "MediaSpace", "privacy": PRIVACY_MEMBERS_ONLY, "contributionPolicy": CONTRIBUTION_MEMBERS}

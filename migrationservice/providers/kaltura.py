@@ -552,9 +552,9 @@ def category_type(category):
     unrecognised privacy value is read as the most restrictive: guessing generously leaks.
     """
     if category_tree_kind(category) == LMS_TREE:
-        # outside a privacy context these fields are inert; reading them would gate what
-        # nobody was gating
-        return CATEGORY_PUBLIC
+        # its privacy fields are inert outside a privacy context; the course itself is
+        # what gates it, so it is private and reached through the course's group
+        return CATEGORY_PRIVATE
 
     privacy = category.get("privacy")
     appear_in_list = category.get("appearInList")
@@ -594,7 +594,7 @@ def needs_rbac_group(category):
 
 CATEGORY_TYPE_STATE = {
     CATEGORY_PUBLIC: "public",
-    CATEGORY_OPEN: "unlisted",
+    CATEGORY_OPEN: "private",
     CATEGORY_RESTRICTED: "private",
     CATEGORY_PRIVATE: "private",
 }
