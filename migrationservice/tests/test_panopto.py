@@ -65,24 +65,28 @@ class TestPanoptoProvider(TestCase):
         self.assertEqual(provider.list_page("groups", {"page": 3}, 10), ([], {"page": 3}))
         self.assertEqual(provider.list_page("unknown", {}, 10), ([], {}))
 
-    def test_the_users_phase_pages_until_the_total_is_reached(self):
+    def test_the_users_phase_pages_until_the_total_is_reached_and_then_ends(self):
         provider = PanoptoProvider(CONNECTION, {})
         pages = {0: (["u1", "u2"], 5), 1: (["u3", "u4"], 5), 2: (["u5"], 5)}
         with mock.patch.object(provider, "list_users", side_effect=lambda page, size: pages[page]) as listed:
             seen, cursor = [], {}
-            for _ in range(5):
-                ids, nxt = provider.list_page("users", cursor, 2)
-                seen += ids
-                if nxt == cursor:
+            for _ in range(10):
+                ids, cursor = provider.list_page("users", cursor, 2)
+                if not ids:
                     break
-                cursor = nxt
+                seen += ids
 
         self.assertEqual(seen, ["u1", "u2", "u3", "u4", "u5"])
-        self.assertEqual([call.args[0] for call in listed.call_args_list], [0, 1, 2])
+        self.assertEqual(listed.call_count, 3)
 
-
-class TestPanoptoShapes(TestCase):
-    """Folder and session records exactly as the live API returns them."""
+    def test_a_single_page_of_users_is_listed_once(self):
+        provider = PanoptoProvider(CONNECTION, {})
+        with mock.patch.object(provider, "list_users", return_value=(["u1", "u2"], 2)) as listed:
+            first = provider.list_page("users", {}, 10)
+            second = provider.list_page("users", first[1], 10)
+        self.assertEqual(first[0], ["u1", "u2"])
+        self.assertEqual(second[0], [])
+        self.assertEqual(listed.call_count, 1)
 
     def test_a_folder_knows_its_own_path(self):
         folder = {

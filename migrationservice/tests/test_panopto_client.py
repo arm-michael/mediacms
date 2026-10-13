@@ -739,7 +739,7 @@ class TestListUsers(SimpleTestCase):
     def test_the_users_phase_stops_on_an_empty_page(self):
         provider = make_provider()
         with mock.patch.object(provider, "list_users", return_value=([], 10)):
-            self.assertEqual(provider.list_page("users", {"page": 4}, 2), ([], {"page": 4}))
+            self.assertEqual(provider.list_page("users", {"page": 4}, 2), ([], {"page": 5, "done": True}))
 
 
 class TestMediaSweep(SimpleTestCase):

@@ -810,10 +810,12 @@ class PanoptoProvider(BaseProvider):
         ends a phase and a filtered out page is not the end of anything.
         """
         if phase == "users":
+            if (cursor or {}).get("done"):
+                return [], dict(cursor)
             page = int((cursor or {}).get("page") or 0)
             ids, total = self.list_users(page, page_size)
             if not ids or (page + 1) * page_size >= total:
-                return ids, {"page": page}
+                return ids, {"page": page + 1, "done": True}
             return ids, {"page": page + 1}
 
         if phase == "categories":
